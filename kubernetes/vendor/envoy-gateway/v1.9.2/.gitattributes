@@ -1,0 +1,2 @@
+# Preserve the SHA-256-locked upstream bytes, including two trailing spaces in CEL.
+base/install.yaml whitespace=-blank-at-eol

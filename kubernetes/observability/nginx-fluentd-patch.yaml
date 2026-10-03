@@ -1,0 +1,60 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-demo
+  namespace: mts-app
+spec:
+  template:
+    metadata:
+      annotations:
+        mts-engineer/fluentd-config-sha256: caf6e3cc6a2e5bebd41f895b77278ed28e46a6f9789c9c1885498ce31e6a54e0
+    spec:
+      containers:
+        - name: fluentd
+          image: mts-engineer/fluentd:1.19.4-loki1.3.0-r1
+          imagePullPolicy: Never
+          args: [--no-supervisor, -r, /opt/mts-fluentd/loki-retry-all.rb, -c, /fluentd/etc/fluent.conf]
+          env:
+            # ServerEngine otherwise opens its Unix socket on read-only /tmp.
+            - name: SERVERENGINE_SOCKETMANAGER_SOCK_DIR
+              value: /fluentd/state
+            - name: POD_NAME
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.name
+          securityContext:
+            runAsNonRoot: true
+            runAsGroup: 2000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+            seccompProfile:
+              type: RuntimeDefault
+          readinessProbe:
+            exec:
+              command: [sh, -c, 'test -w /fluentd/state && test -r /var/log/nginx/access.json && test -r /var/log/nginx/error.log']
+            periodSeconds: 5
+          resources:
+            requests:
+              cpu: 25m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+          volumeMounts:
+            - name: app-logs
+              mountPath: /var/log/nginx
+              readOnly: true
+            - name: fluentd-state
+              mountPath: /fluentd/state
+            - name: fluentd-config
+              mountPath: /fluentd/etc
+              readOnly: true
+      volumes:
+        - name: fluentd-config
+          configMap:
+            name: fluentd-config
+        - name: fluentd-state
+          emptyDir:
+            sizeLimit: 128Mi

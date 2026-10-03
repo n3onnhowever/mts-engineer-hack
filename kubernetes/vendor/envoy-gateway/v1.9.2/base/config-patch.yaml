@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: envoy-gateway-config
+  namespace: envoy-gateway-system
+data:
+  envoy-gateway.yaml: |
+    apiVersion: gateway.envoyproxy.io/v1alpha1
+    kind: EnvoyGateway
+    extensionApis: {}
+    gateway:
+      controllerName: gateway.envoyproxy.io/gatewayclass-controller
+    logging:
+      level:
+        default: info
+    provider:
+      type: Kubernetes
+      kubernetes:
+        shutdownManager:
+          image: docker.io/envoyproxy/gateway:v1.9.2@sha256:9d67017c442a70e6ae9f1a358e6c80eb653c67c2e40823d9a991e0daf37ba926

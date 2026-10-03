@@ -1,0 +1,100 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loki
+  namespace: mts-observability
+  labels:
+    app.kubernetes.io/name: loki
+    app.kubernetes.io/part-of: mts-engineer-hack
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: loki
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: loki
+        app.kubernetes.io/part-of: mts-engineer-hack
+      annotations:
+        mts-engineer/config-sha256: a7c565063fbe2da5bc44391cf830a4459034e147cd2d67a99108c0d1a3ab0f38
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: loki
+          image: docker.io/grafana/loki:3.7.8@sha256:1107dd5274e0ada47e42472b7a7e71f3b2a2fe878878108f3e2f9e51528f0193
+          imagePullPolicy: IfNotPresent
+          args:
+            - -config.file=/etc/loki/loki.yml
+            - -target=all
+          ports:
+            - name: http
+              containerPort: 3100
+          readinessProbe:
+            httpGet:
+              path: /ready
+              port: http
+            periodSeconds: 5
+          # /metrics is independent of ring readiness; do not restart Loki while
+          # its ingester is waiting to become ready.
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: http
+            periodSeconds: 10
+          startupProbe:
+            httpGet:
+              path: /ready
+              port: http
+            periodSeconds: 5
+            failureThreshold: 36
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 768Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: config
+              mountPath: /etc/loki
+              readOnly: true
+            - name: data
+              mountPath: /loki
+      volumes:
+        - name: config
+          configMap:
+            name: loki-config
+        - name: data
+          emptyDir:
+            sizeLimit: 1Gi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loki
+  namespace: mts-observability
+  labels:
+    app.kubernetes.io/name: loki
+    app.kubernetes.io/part-of: mts-engineer-hack
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: loki
+  ports:
+    - name: http
+      port: 3100
+      targetPort: http
+      protocol: TCP

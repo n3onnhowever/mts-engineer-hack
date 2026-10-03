@@ -1,0 +1,103 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus
+  namespace: mts-observability
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: mts-engineer-hack
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: prometheus
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: prometheus
+        app.kubernetes.io/part-of: mts-engineer-hack
+      annotations:
+        mts-engineer/config-sha256: b2dea12b73ac4b935da60d2e09acacaf62da9870dc228d0a23ca4b36d79876a2
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        # The pinned image uses the name nobody; kubelet needs a numeric UID.
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: prometheus
+          image: docker.io/prom/prometheus:v3.15.0@sha256:efd719c99d83b060d9daefdcf00360461adf279f45ef5391f8d111892118753e
+          imagePullPolicy: IfNotPresent
+          args:
+            - --config.file=/etc/prometheus/prometheus.yml
+            - --storage.tsdb.path=/prometheus
+            - --storage.tsdb.retention.time=2d
+            - --storage.tsdb.retention.size=256MB
+          ports:
+            - name: http
+              containerPort: 9090
+          readinessProbe:
+            httpGet:
+              path: /-/ready
+              port: http
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /-/healthy
+              port: http
+            periodSeconds: 10
+          startupProbe:
+            httpGet:
+              path: /-/ready
+              port: http
+            periodSeconds: 5
+            failureThreshold: 36
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          volumeMounts:
+            - name: config
+              mountPath: /etc/prometheus
+              readOnly: true
+            - name: data
+              mountPath: /prometheus
+      volumes:
+        - name: config
+          configMap:
+            name: prometheus-config
+        - name: data
+          emptyDir:
+            sizeLimit: 512Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus
+  namespace: mts-observability
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: mts-engineer-hack
+spec:
+  type: ClusterIP
+  selector:
+    app.kubernetes.io/name: prometheus
+  ports:
+    - name: http
+      port: 9090
+      targetPort: http
+      protocol: TCP

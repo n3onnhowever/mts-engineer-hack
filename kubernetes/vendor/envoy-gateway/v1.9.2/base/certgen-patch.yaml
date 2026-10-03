@@ -1,0 +1,20 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: eg-gateway-helm-certgen
+  namespace: envoy-gateway-system
+spec:
+  # A retained result makes completion/template handling deterministic on reruns.
+  ttlSecondsAfterFinished: null
+  activeDeadlineSeconds: 180
+  template:
+    spec:
+      containers:
+        - name: envoy-gateway-certgen
+          image: docker.io/envoyproxy/gateway:v1.9.2@sha256:9d67017c442a70e6ae9f1a358e6c80eb653c67c2e40823d9a991e0daf37ba926
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              memory: 128Mi

@@ -1,0 +1,13 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+patches:
+  - target:
+      kind: Namespace|ServiceAccount|ConfigMap|ClusterRole|ClusterRoleBinding|Role|RoleBinding|Service|Deployment|Job|MutatingWebhookConfiguration
+    patch: |-
+      $patch: delete
+      apiVersion: v1
+      kind: List
+      metadata:
+        name: phase-excluded

@@ -1,0 +1,6 @@
+*
+!Dockerfile
+!Gemfile
+!Gemfile.lock
+!fetch-gems.rb
+!loki-retry-all.rb

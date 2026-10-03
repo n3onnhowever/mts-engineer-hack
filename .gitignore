@@ -1,0 +1,23 @@
+# Local diagnostics and generated artifacts
+.local/
+*.log
+*.tmp
+*.bundle
+*.pdf
+*.zip
+Ссылка.txt
+# Local environments, credentials and caches
+.env
+.env.*
+!.env.example
+__pycache__/
+*.pyc
+.venv/
+venv/
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+kubeconfig
+kubeconfig.*
+*.key

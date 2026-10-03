@@ -1,0 +1,22 @@
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: mts-gateway
+  namespace: mts-app
+  labels:
+    app.kubernetes.io/part-of: mts-engineer-hack
+spec:
+  gatewayClassName: mts-envoy
+  infrastructure:
+    parametersRef:
+      group: gateway.envoyproxy.io
+      kind: EnvoyProxy
+      name: mts-proxy
+  listeners:
+    - name: http
+      protocol: HTTP
+      port: 80
+      hostname: mts.local
+      allowedRoutes:
+        namespaces:
+          from: Same

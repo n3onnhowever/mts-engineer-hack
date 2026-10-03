@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-demo
+  namespace: mts-app
+  labels:
+    app.kubernetes.io/name: nginx-demo
+    app.kubernetes.io/part-of: mts-engineer-hack
+spec:
+  replicas: 1
+  revisionHistoryLimit: 2
+  progressDeadlineSeconds: 180
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: nginx-demo
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: nginx-demo
+        app.kubernetes.io/part-of: mts-engineer-hack
+      annotations:
+        # SHA-256 of ConfigMap data.nginx.conf; refresh when editing configuration.
+        checksum/nginx-config: 100bbab2b9d812f11b4022ebc59ca53d07277115546fb0059c7758abcb96fb45
+    spec:
+      serviceAccountName: nginx-demo
+      automountServiceAccountToken: false
+      securityContext:
+        fsGroup: 2000
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: nginx
+          image: docker.io/library/nginx:1.30.5-alpine@sha256:0985e772fb9f729e6fa0980da05fca5d9c468e870eed43071545afa9d2e27d94
+          imagePullPolicy: IfNotPresent
+          # Invoke Nginx directly; the stock image entrypoint edits its default config.
+          command: [nginx]
+          args: [-g, "daemon off;"]
+          ports:
+            - name: http
+              containerPort: 8080
+              protocol: TCP
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 101
+            # Files created by Nginx are group-readable; fsGroup owns the emptyDir.
+            runAsGroup: 2000
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: [ALL]
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 1
+            periodSeconds: 5
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 25m
+              memory: 16Mi
+            limits:
+              cpu: 200m
+              memory: 64Mi
+          volumeMounts:
+            - name: nginx-config
+              mountPath: /etc/nginx/nginx.conf
+              subPath: nginx.conf
+              readOnly: true
+            - name: app-logs
+              mountPath: /var/log/nginx
+            - name: nginx-tmp
+              mountPath: /tmp
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: nginx-demo-config
+            defaultMode: 0444
+        - name: app-logs
+          emptyDir:
+            sizeLimit: 128Mi
+        - name: nginx-tmp
+          emptyDir:
+            sizeLimit: 16Mi

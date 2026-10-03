@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: envoy-gateway-system
+  labels:
+    app.kubernetes.io/part-of: mts-engineer-hack
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mts-app
+  labels:
+    app.kubernetes.io/part-of: mts-engineer-hack
+---
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: mts-observability
+  labels:
+    app.kubernetes.io/part-of: mts-engineer-hack

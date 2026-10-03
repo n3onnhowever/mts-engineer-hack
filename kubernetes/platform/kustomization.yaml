@@ -1,0 +1,6 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Root application composition can safely repeat the namespace declarations.
+# CRDs, certgen and controller are separate earlier deployment phases.
+resources:
+  - namespaces.yaml

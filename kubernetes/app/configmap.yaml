@@ -1,0 +1,51 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-demo-config
+  namespace: mts-app
+  labels:
+    app.kubernetes.io/part-of: mts-engineer-hack
+data:
+  nginx.conf: |
+    worker_processes 1;
+    pid /tmp/nginx.pid;
+    error_log /var/log/nginx/error.log error;
+
+    events {
+        worker_connections 256;
+    }
+
+    http {
+        log_format mts_json escape=json
+            '{"timestamp":"$time_iso8601","request_id":"$http_x_mts_request_id",'
+            '"method":"$request_method","path":"$uri","status":$status,"host":"$host"}';
+        access_log /var/log/nginx/access.json mts_json;
+        log_not_found on;
+        server_tokens off;
+        client_body_temp_path /tmp/client_body;
+        proxy_temp_path /tmp/proxy;
+        fastcgi_temp_path /tmp/fastcgi;
+        uwsgi_temp_path /tmp/uwsgi;
+        scgi_temp_path /tmp/scgi;
+
+        server {
+            listen 8080;
+            server_name mts.local;
+            default_type text/plain;
+            root /usr/share/nginx/html;
+
+            location = / {
+                return 200 "MTS Engineer Hack: OK\n";
+            }
+
+            location = /healthz {
+                access_log off;
+                return 200 "MTS Engineer Hack: OK\n";
+            }
+
+            # Normal static handling: the absent file produces a native open() error.
+            location /error/ {
+                log_not_found on;
+            }
+        }
+    }

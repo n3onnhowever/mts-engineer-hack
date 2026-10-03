@@ -1,0 +1,14 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+# Apply after certgen completes and its generated Secrets are validated.
+resources:
+  - ../base
+patches:
+  - target:
+      kind: CustomResourceDefinition|ValidatingAdmissionPolicy|ValidatingAdmissionPolicyBinding|Namespace|ServiceAccount|ConfigMap|ClusterRole|ClusterRoleBinding|Role|RoleBinding|Service|Job|MutatingWebhookConfiguration
+    patch: |-
+      $patch: delete
+      apiVersion: v1
+      kind: List
+      metadata:
+        name: phase-excluded
